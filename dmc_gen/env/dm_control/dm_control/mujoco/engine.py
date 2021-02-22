@@ -284,7 +284,7 @@ class Physics(_control.Physics):
         context is nested inside a `suppress_physics_errors` context, in which
         case a warning will be logged instead.
     """
-    # `np.copyto(dst, src)` is marginally faster than `dst[:] = src`.
+    # `np.copyto(dst, dmc_gen)` is marginally faster than `dst[:] = dmc_gen`.
     np.copyto(self._warnings_before, self._warnings)
     yield
     np.greater(self._warnings, self._warnings_before, out=self._new_warnings)

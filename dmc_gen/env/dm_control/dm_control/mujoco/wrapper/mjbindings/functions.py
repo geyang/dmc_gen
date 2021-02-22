@@ -397,7 +397,7 @@ Copy mjModel, allocate new if dest is NULL.
 
 Args:
   dest: ctypes.POINTER(MJMODEL)
-  src: ctypes.POINTER(MJMODEL) <const>
+  dmc_gen: ctypes.POINTER(MJMODEL) <const>
 
 Returns:
   ctypes.POINTER(MJMODEL)
@@ -488,7 +488,7 @@ Copy mjData.
 Args:
   dest: ctypes.POINTER(MJDATA)
   m: ctypes.POINTER(MJMODEL) <const>
-  src: ctypes.POINTER(MJDATA) <const>
+  dmc_gen: ctypes.POINTER(MJDATA) <const>
 
 Returns:
   ctypes.POINTER(MJDATA)
@@ -2499,12 +2499,12 @@ mjlib.mjr_drawPixels.argtypes = [
 mjlib.mjr_drawPixels.restype = None
 
 mjlib.mjr_blitBuffer.__doc__ = """
-Blit from src viewpoint in current framebuffer to dst viewport in other
-framebuffer. If src, dst have different size and flg_depth==0, color is
+Blit from dmc_gen viewpoint in current framebuffer to dst viewport in other
+framebuffer. If dmc_gen, dst have different size and flg_depth==0, color is
 interpolated with GL_LINEAR.
 
 Args:
-  src: MJRRECT
+  dmc_gen: MJRRECT
   dst: MJRRECT
   flg_color: ctypes.c_int
   flg_depth: ctypes.c_int
@@ -2537,7 +2537,7 @@ Blit from Aux buffer to con->currentBuffer.
 
 Args:
   index: ctypes.c_int
-  src: MJRRECT
+  dmc_gen: MJRRECT
   left: ctypes.c_int
   bottom: ctypes.c_int
   con: ctypes.POINTER(MJRCONTEXT) <const>
@@ -4264,7 +4264,7 @@ Call strncpy, then set dst[n-1] = 0.
 
 Args:
   dst: ctypes.POINTER(ctypes.c_char)
-  src: ctypes.POINTER(ctypes.c_char) <const>
+  dmc_gen: ctypes.POINTER(ctypes.c_char) <const>
   n: ctypes.c_int
 
 Returns:

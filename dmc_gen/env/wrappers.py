@@ -81,7 +81,7 @@ class ColorWrapper(gym.Wrapper):
 
 	def _load_colors(self):
 		assert self._mode in {'color_easy', 'color_hard'}
-		self._colors = torch.load(f'src/env/data/{self._mode}.pt')
+		self._colors = torch.load(f'dmc_gen/env/data/{self._mode}.pt')
 
 	def get_random_color(self):
 		assert len(self._colors) >= 100, 'env must include at least 100 colors'
@@ -235,7 +235,7 @@ class VideoWrapper(gym.Wrapper):
 		self._max_episode_steps = env._max_episode_steps
 
 	def _get_video_paths(self):
-		video_dir = os.path.join('src/env/data', self._mode)
+		video_dir = os.path.join('dmc_gen/env/data', self._mode)
 		if 'video_easy' in self._mode:
 			self._video_paths = [os.path.join(video_dir, f'video{i}.mp4') for i in range(10)]
 		elif 'video_hard' in self._mode:

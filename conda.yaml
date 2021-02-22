@@ -20,3 +20,7 @@ dependencies:
     - scikit-image
     - seaborn
     - tqdm
+    - ml-logger
+    - params-proto
+    - waterbear
+    - cloudpickle==1.3.0

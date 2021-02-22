@@ -1,36 +1,6 @@
 # DMControl Generalization Benchmark
 Benchmark for generalization in continuous control from pixels, based on [DMControl](https://github.com/deepmind/dm_control).
 
-Also contains an official implementation of
-
-**Generalization in Reinforcement Learning by Soft Data Augmentation** (SODA)<br/>
-by [Nicklas Hansen](https://nicklashansen.github.io/) and [Xiaolong Wang](https://xiaolonw.github.io/).
-
-[[Paper]](https://arxiv.org/abs/2011.13389) [[Webpage]](https://nicklashansen.github.io/SODA/)
-
-
-## Test environments
-
-This repository provides two distinct benchmarks for visual generalization, *random colors* and *video backgrounds*:
-
-![environment samples](figures/environments.png)
-
-Both benchmarks are offered in *easy* and *hard* variants. Samples are shown below.
-
-**color_easy**<br/>
-![color_easy](figures/color_easy.png)
-
-**color_hard**<br/>
-![color_hard](figures/color_hard.png)
-
-**video_easy**<br/>
-![video_easy](figures/video_easy.png)
-
-**video_hard**<br/>
-![video_hard](figures/video_hard.png)
-
-By default, algorithms are trained for 500k frames and are continuously evaluated in both training and test environments. Environment randomization is seeded to promote reproducibility.
-
 
 ## Algorithms
 
@@ -42,26 +12,10 @@ This repository contains implementations of the following papers in a unified fr
 - [CURL (Srinivas et al., 2020)](https://arxiv.org/abs/2004.04136)
 - [SAC (Haarnoja et al., 2018)](https://arxiv.org/abs/1812.05905)
 
-using standardized architecture and hyper-parameters, wherever applicable. If you want to add an algorithm, feel free to send a pull request.
-
-
-## Citation
-<a name="citation"></a>
-If you find our work useful in your research, please consider citing the paper as follows:
-
-```
-@article{hansen2020softda,
-  title={Generalization in Reinforcement Learning by Soft Data Augmentation},
-  author={Nicklas Hansen and Xiaolong Wang},
-  year={2020},
-  eprint={2011.13389},
-  archivePrefix={arXiv},
-  primaryClass={cs.LG}
-}
-```
-
+using standardized architecture and hyper-parameters, wherever applicable. 
 
 ## Setup
+
 We assume that you have access to a GPU with CUDA >=9.2 support. All dependencies can then be installed with the following commands:
 
 ```

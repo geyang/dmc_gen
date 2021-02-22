@@ -176,7 +176,7 @@ class CachedProperty(property):
 
 
 def _as_array(src, shape):
-  """Converts a native `src` array to a managed numpy buffer.
+  """Converts a native `dmc_gen` array to a managed numpy buffer.
 
   Args:
     src: A ctypes pointer or array.
@@ -189,7 +189,7 @@ def _as_array(src, shape):
   # To work around a memory leak in numpy, we have to go through this
   # frombuffer method instead of calling ctypeslib.as_array.  See
   # https://github.com/numpy/numpy/issues/6511
-  # return np.ctypeslib.as_array(src, shape)
+  # return np.ctypeslib.as_array(dmc_gen, shape)
 
   # This is part of the public API.  See
   # http://git.net/ml/python.ctypes/2008-02/msg00014.html
@@ -215,7 +215,7 @@ def buf_to_npy(src, shape, np_dtype=None):
     src: A ctypes pointer or array.
     shape: A tuple specifying the dimensions of the output array.
     np_dtype: A string or `np.dtype` object specifying the dtype of the output
-      array. If None, the dtype is inferred from the type of `src`.
+      array. If None, the dtype is inferred from the type of `dmc_gen`.
 
   Returns:
     A numpy array.
