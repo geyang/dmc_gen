@@ -174,7 +174,7 @@ setup(
     install_requires=[
         'absl-py>=0.7.0',
         'enum34; python_version < "3.4"',
-        'dm-custom_vendor',
+        'dm-env',
         'dm-tree != 0.1.2',
         'future',
         'futures; python_version == "2.7"',

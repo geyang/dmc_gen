@@ -95,7 +95,7 @@ def load(domain_name, task_name, task_kwargs=None, environment_kwargs=None,
   """Returns an environment from a domain name, task name and optional settings.
 
   ```python
-  custom_vendor = suite.load('cartpole', 'balance')
+  env = suite.load('cartpole', 'balance')
   ```
 
   Args:

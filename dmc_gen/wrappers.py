@@ -40,7 +40,7 @@ class ColorWrapper(gym.Wrapper):
     prefix = "custom_vendor/data"
 
     def __init__(self, env, mode, seed=None):
-        assert isinstance(env, FrameStack), 'wrapped custom_vendor must be a framestack'
+        assert isinstance(env, FrameStack), 'wrapped env must be a framestack'
         gym.Wrapper.__init__(self, env)
         self._max_episode_steps = env._max_episode_steps
         self._mode = mode
@@ -80,7 +80,7 @@ class ColorWrapper(gym.Wrapper):
         self._colors = torch.load(f'{self.prefix}/{self._mode}.pt')
 
     def get_random_color(self):
-        assert len(self._colors) >= 100, 'custom_vendor must include at least 100 colors'
+        assert len(self._colors) >= 100, 'env must include at least 100 colors'
         return self._colors[self._random_state.randint(len(self._colors))]
 
     def reload_physics(self, setting_kwargs=None, state=None):
@@ -105,7 +105,7 @@ class ColorWrapper(gym.Wrapper):
 
     def _get_dmc_wrapper(self):
         _env = self.env
-        while not isinstance(_env, dmc2gym.wrappers.DMCWrapper) and hasattr(_env, 'custom_vendor'):
+        while not isinstance(_env, dmc2gym.wrappers.DMCWrapper) and hasattr(_env, 'env'):
             _env = _env.env
         assert isinstance(_env, dmc2gym.wrappers.DMCWrapper), 'environment is not dmc2gym-wrapped'
 
@@ -113,14 +113,14 @@ class ColorWrapper(gym.Wrapper):
 
     def _reload_physics(self, xml_string, assets=None):
         _env = self.env
-        while not hasattr(_env, '_physics') and hasattr(_env, 'custom_vendor'):
+        while not hasattr(_env, '_physics') and hasattr(_env, 'env'):
             _env = _env.env
         assert hasattr(_env, '_physics'), 'environment does not have physics attribute'
         _env.physics.reload_from_xml_string(xml_string, assets=assets)
 
     def _get_physics(self):
         _env = self.env
-        while not hasattr(_env, '_physics') and hasattr(_env, 'custom_vendor'):
+        while not hasattr(_env, '_physics') and hasattr(_env, 'env'):
             _env = _env.env
         assert hasattr(_env, '_physics'), 'environment does not have physics attribute'
 

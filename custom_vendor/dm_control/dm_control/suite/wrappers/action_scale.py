@@ -24,7 +24,7 @@ from dm_env import specs
 import numpy as np
 
 _ACTION_SPEC_MUST_BE_BOUNDED_ARRAY = (
-    "`custom_vendor.action_spec()` must return a single `BoundedArray`, got: {}.")
+    "`env.action_spec()` must return a single `BoundedArray`, got: {}.")
 _MUST_BE_FINITE = "All values in `{name}` must be finite, got: {bounds}."
 _MUST_BROADCAST = (
     "`{name}` must be broadcastable to shape {shape}, got: {bounds}.")
@@ -48,11 +48,11 @@ class Wrapper(dm_env.Environment):
         finite and broadcastable to the shape of the `action_spec`.
 
     Raises:
-      ValueError: If `custom_vendor.action_spec()` is not a single `BoundedArray`.
-      ValueError: If `custom_vendor.action_spec()` has non-finite bounds.
+      ValueError: If `env.action_spec()` is not a single `BoundedArray`.
+      ValueError: If `env.action_spec()` has non-finite bounds.
       ValueError: If `minimum` or `maximum` contain non-finite values.
       ValueError: If `minimum` or `maximum` are not broadcastable to
-        `custom_vendor.action_spec().shape`.
+        `env.action_spec().shape`.
     """
     action_spec = env.action_spec()
     if not isinstance(action_spec, specs.BoundedArray):
@@ -76,8 +76,8 @@ class Wrapper(dm_env.Environment):
 
     validate(minimum, "minimum")
     validate(maximum, "maximum")
-    validate(orig_minimum, "custom_vendor.action_spec().minimum")
-    validate(orig_maximum, "custom_vendor.action_spec().maximum")
+    validate(orig_minimum, "env.action_spec().minimum")
+    validate(orig_maximum, "env.action_spec().maximum")
 
     scale = (orig_maximum - orig_minimum) / (maximum - minimum)
 
