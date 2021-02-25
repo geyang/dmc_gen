@@ -24,7 +24,7 @@ import numpy as np
 
 
 _BOUNDS_MUST_BE_FINITE = (
-    'All bounds in `env.action_spec()` must be finite, got: {action_spec}')
+    'All bounds in `custom_vendor.action_spec()` must be finite, got: {action_spec}')
 
 
 class Wrapper(dm_env.Environment):

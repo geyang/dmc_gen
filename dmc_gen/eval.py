@@ -7,8 +7,8 @@ import utils
 from copy import deepcopy
 from tqdm import tqdm
 from arguments import parse_args
-from env.wrappers import make_env
-from algorithms.factory import make_agent
+from dmc_gen.wrappers import make_env
+from dmc_gen.algorithms.factory import make_agent
 from video import VideoRecorder
 import augmentations
 

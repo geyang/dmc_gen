@@ -118,7 +118,7 @@ class ActionNoiseTest(parameterized.TestCase):
   def test_action_spec(self):
     env = self.make_mock_env()
     wrapped_env = action_noise.Wrapper(env)
-    # `env.action_spec()` is called in `Wrapper.__init__()`
+    # `custom_vendor.action_spec()` is called in `Wrapper.__init__()`
     env.action_spec.reset_mock()
     action_spec = wrapped_env.action_spec()
     env.action_spec.assert_called_once_with()
