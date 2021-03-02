@@ -33,7 +33,8 @@ class PAD(SAC):
             self.pad_head.parameters(), lr=self.aux_lr, betas=(self.aux_beta, 0.999)
         )
 
-    def update_inverse_dynamics(self, obs, obs_next, action, L=None, step=None):
+    def update_inverse_dynamics(self, obs, obs_next, action):
+        from ml_logger import logger
         assert obs.shape[-1] == 84 and obs_next.shape[-1] == 84
 
         pred_action = self.pad_head(obs, obs_next)
@@ -42,19 +43,19 @@ class PAD(SAC):
         self.pad_optimizer.zero_grad()
         pad_loss.backward()
         self.pad_optimizer.step()
-        if L is not None:
-            L.log('train/aux_loss', pad_loss, step)
 
-    def update(self, replay_buffer, L, step):
+        logger.store_metrics({'inm/loss': pad_loss})
+
+    def update(self, replay_buffer, step):
         obs, action, reward, next_obs, not_done = replay_buffer.sample()
 
-        self.update_critic(obs, action, reward, next_obs, not_done, L, step)
+        self.update_critic(obs, action, reward, next_obs, not_done)
 
         if step % self.actor_update_freq == 0:
-            self.update_actor_and_alpha(obs, L, step)
+            self.update_actor_and_alpha(obs)
 
         if step % self.critic_target_update_freq == 0:
             self.soft_update_critic_target()
 
         if step % self.aux_update_freq == 0:
-            self.update_inverse_dynamics(obs, next_obs, action, L, step)
+            self.update_inverse_dynamics(obs, next_obs, action)

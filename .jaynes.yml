@@ -1,10 +1,15 @@
 version: 0
 hosts:
-  visiongpy: &vision01
+  visiongpu: &vision04
+    ip: "visiongpu04"
+    username: "{env.JYNS_USERNAME}"
+    password: "{env.JYNS_PASSWORD}"
+    launch_dir: "{env.JYNS_DIR}/dmc_gen/{now:%Y-%m-%d}/{now:%H%M%S.%f}"
+  vision-login: &visiongpu50
     ip: "visiongpu50"
     username: "{env.JYNS_USERNAME}"
     password: "{env.JYNS_PASSWORD}"
-    launch_dir: "{env.JYNS_DIR}/dreamerv2/{now:%Y-%m-%d}/{now:%H%M%S.%f}"
+    launch_dir: "{env.JYNS_DIR}/dmc_gen/{now:%Y-%m-%d}/{now:%H%M%S.%f}"
   # supercloud
   gaia: &login_node !host
     ip: "{env.JYNS_SLURM_HOST}"
@@ -15,8 +20,8 @@ mounts: # mount configurations Available keys: NOW, UUID,
     local_path: .
     # host_path: $JYNMNT/latent-planning/latent-planning
     local_tar: /tmp/{now:%Y-%m-%d}/{now:%H%M%S.%f}-dmc_gen.tar
-    host_path: "{env.JYNS_SLURM_DIR}/dreamerv2/{now:%Y-%m-%d}/{now:%H%M%S.%f}-dmc_gen"
-    remote_tar: "{env.JYNS_SLURM_DIR}/dreamerv2/{now:%Y-%m-%d}/{now:%H%M%S.%f}-dmc_gen.tar"
+    host_path: "{env.JYNS_SLURM_DIR}/dmc_gen/{now:%Y-%m-%d}/{now:%H%M%S.%f}/dmc_gen"
+    remote_tar: "{env.JYNS_SLURM_DIR}/dmc_gen/{now:%Y-%m-%d}/{now:%H%M%S.%f}/dmc_gen.tar"
     pypath: true
     excludes: >-
       --exclude='data' --exclude='samples' --exclude='images' --exclude='videos'
@@ -25,12 +30,12 @@ mounts: # mount configurations Available keys: NOW, UUID,
       --exclude='*.mp4' --exclude='*.idea' --exclude='*.egg-info' --exclude='*.pkl'
       --exclude='*.log*' --exclude='custom_vendor'
     compress: true
-  - !mounts.SSHCode &csail_code_mount
+  - !mounts.SSHCode &vision_code_mount
     local_path: .
     # host_path: $JYNMNT/latent-planning/latent-planning
     local_tar: /tmp/{now:%Y-%m-%d}/{now:%H%M%S.%f}-dmc_gen.tar
-    host_path: "{env.JYNS_DIR}/dreamerv2/{now:%Y-%m-%d}/{now:%H%M%S.%f}-dmc_gen"
-    remote_tar: "{env.JYNS_DIR}/dreamerv2/{now:%Y-%m-%d}/{now:%H%M%S.%f}-dmc_gen.tar"
+    host_path: "{env.JYNS_DIR}/dmc_gen/{now:%Y-%m-%d}/{now:%H%M%S.%f}/dmc_gen"
+    remote_tar: "{env.JYNS_DIR}/dmc_gen/{now:%Y-%m-%d}/{now:%H%M%S.%f}/dmc_gen.tar"
     pypath: true
     excludes: >-
       --exclude='data' --exclude='samples' --exclude='images' --exclude='videos'
@@ -44,46 +49,73 @@ runners:
     setup: |
       source $HOME/.bashrc
       conda activate dmcgen
+      echo Running on `hostname`
     envs: >-
       LANG=utf-8
       LC_CTYPE=en_US.UTF-8
+      MUJOCO_GL=osmesa
+      IMAGEIO_FFMPEG_EXE=/usr/bin/ffmpeg
     pypath: "{mounts[0].host_path}"
     work_dir: "{mounts[0].host_path}"
-  - !runners.Slurm &supercloud-slurm
-    envs: >-
-      LC_CTYPE=en_US.UTF-8 LANG=en_US.UTF-8 LANGUAGE=en_US
-      HTTP_PROXY=http://login-2:8082
-      LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/gridsan/geyang/.mujoco/mujoco200/bin
-    startup: >-
-      source ~/.bashrc;
-      module load cuda/11.0;
-      module load anaconda/2020b;
-      source activate dmcgen;
-      cp -r /state/partition1/user/$USER/mujoco-py /home/gridsan/$USER/;
-    pypath: "{mounts[0].host_path}"
-    work_dir: "{mounts[0].host_path}"
-    partition: normal # not clear what the partition is like
-    exclude: d-10-4-1
-    # time_limit: "0:0:20"
-    n_cpu: 8
-    n_gpu: volta:1
+#    detach: true
 
 modes:
-  visiongpu: &vision
+  vision:
     host: !host
-      <<: *vision01
+      <<: *vision04
     mounts:
-      - *csail_code_mount
+      - *vision_code_mount
     runner: *ssh_runner
     launch:
       type: ssh
-      <<: *vision01
+      <<: *vision04
+  vision-gpu:
+    host: !host
+      <<: *visiongpu50
+    mounts:
+      - *vision_code_mount
+    runner: !runners.Slurm
+      startup: >-
+        source $HOME/public/.profile;
+        conda activate dmcgen
+      envs: >-
+        LANG=utf-8
+        LC_CTYPE=en_US.UTF-8
+        MUJOCO_GL=osmesa
+        IMAGEIO_FFMPEG_EXE=/usr/bin/ffmpeg
+      pypath: "{mounts[0].host_path}"
+      work_dir: "{mounts[0].host_path}"
+      partition: imp # not clear what the partition is like
+      # time_limit: "0:0:20"
+      nodelist: imp7
+      n_cpu: 8
+      n_gpu: "2080:1"
+    launch:
+      type: ssh
+      <<: *visiongpu50
   supercloud: &supercloud
     host: !host
       <<: *login_node
     mounts:
       - *supercloud_code_mount
-    runner: *supercloud-slurm
+    runner: !runners.Slurm
+      envs: >-
+        LC_CTYPE=en_US.UTF-8 LANG=en_US.UTF-8 LANGUAGE=en_US
+        HTTP_PROXY=http://login-2:8082
+        LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/gridsan/geyang/.mujoco/mujoco200/bin
+      startup: >-
+        source ~/.bashrc;
+        module load cuda/11.0;
+        module load anaconda/2020b;
+        source activate dmcgen;
+        cp -r /state/partition1/user/$USER/mujoco-py /home/gridsan/$USER/;
+      pypath: "{mounts[0].host_path}"
+      work_dir: "{mounts[0].host_path}"
+      partition: normal # not clear what the partition is like
+      exclude: d-10-4-1
+      # time_limit: "0:0:20"
+      n_cpu: 8
+      n_gpu: volta:1
     launch:
       type: ssh
       <<: *login_node

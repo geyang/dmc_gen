@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
+from .. import utils
 from ..algorithms import modules as m
 
 
@@ -78,34 +79,33 @@ class SAC(object):
             mu, pi, _, _ = self.actor(obs, compute_log_pi=False)
             return pi.cpu().data.numpy().flatten()
 
-    def update_critic(self, obs, action, reward, next_obs, not_done, L, step):
+    def update_critic(self, obs, action, reward, next_obs, not_done):
+        from ml_logger import logger
         with torch.no_grad():
             _, policy_action, log_pi, _ = self.actor(next_obs)
             target_Q1, target_Q2 = self.critic_target(next_obs, policy_action)
-            target_V = torch.min(target_Q1,
-                                 target_Q2) - self.alpha.detach() * log_pi
+            target_V = torch.min(target_Q1, target_Q2) - self.alpha.detach() * log_pi
             target_Q = reward + (not_done * self.discount * target_V)
 
         current_Q1, current_Q2 = self.critic(obs, action)
-        critic_loss = F.mse_loss(current_Q1,
-                                 target_Q) + F.mse_loss(current_Q2, target_Q)
-        L.log('train_critic/loss', critic_loss, step)
+        critic_loss = F.mse_loss(current_Q1, target_Q) + F.mse_loss(current_Q2, target_Q)
+        logger.store_metrics({'critic/loss': critic_loss})
 
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         self.critic_optimizer.step()
 
-    def update_actor_and_alpha(self, obs, L=None, step=None, update_alpha=True):
+    def update_actor_and_alpha(self, obs, update_alpha=True):
+        from ml_logger import logger
+
         _, pi, log_pi, log_std = self.actor(obs, detach=True)
         actor_Q1, actor_Q2 = self.critic(obs, pi, detach=True)
 
         actor_Q = torch.min(actor_Q1, actor_Q2)
         actor_loss = (self.alpha.detach() * log_pi - actor_Q).mean()
 
-        if L is not None:
-            L.log('train_actor/loss', actor_loss, step)
-            entropy = 0.5 * log_std.shape[1] * (1.0 + np.log(2 * np.pi)
-                                                ) + log_std.sum(dim=-1)
+        logger.store_metrics(actor_loss=actor_loss)
+        # entropy = 0.5 * log_std.shape[1] * (1.0 + np.log(2 * np.pi)) + log_std.sum(dim=-1)
 
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
@@ -115,9 +115,7 @@ class SAC(object):
             self.log_alpha_optimizer.zero_grad()
             alpha_loss = (self.alpha * (-log_pi - self.target_entropy).detach()).mean()
 
-            if L is not None:
-                L.log('train_alpha/loss', alpha_loss, step)
-                L.log('train_alpha/value', self.alpha, step)
+            logger.store_metrics({'alpha/loss': alpha_loss, 'alpha/value': self.alpha})
 
             alpha_loss.backward()
             self.log_alpha_optimizer.step()
@@ -134,13 +132,13 @@ class SAC(object):
             self.encoder_tau
         )
 
-    def update(self, replay_buffer, L, step):
+    def update(self, replay_buffer, step):
         obs, action, reward, next_obs, not_done = replay_buffer.sample()
 
-        self.update_critic(obs, action, reward, next_obs, not_done, L, step)
+        self.update_critic(obs, action, reward, next_obs, not_done)
 
         if step % self.actor_update_freq == 0:
-            self.update_actor_and_alpha(obs, L, step)
+            self.update_actor_and_alpha(obs)
 
         if step % self.critic_target_update_freq == 0:
             self.soft_update_critic_target()

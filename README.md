@@ -1,6 +1,7 @@
 # DMControl Generalization Benchmark
-Benchmark for generalization in continuous control from pixels, based on [DMControl](https://github.com/deepmind/dm_control).
+This code base is a fork-in-progress from [Hansen & Wang 2020](https://arxiv.org/abs/2011.13389. Benchmark for generalization in continuous control from pixels based on [DMControl](https://github.com/deepmind/dm_control).
 
+ 
 
 ## Algorithms
 
@@ -19,9 +20,9 @@ using standardized architecture and hyper-parameters, wherever applicable.
 We assume that you have access to a GPU with CUDA >=9.2 support. All dependencies can then be installed with the following commands:
 
 ```
-conda env create -f setup/conda.yml
+conda env create -f conda.yml
 conda activate dmcgen
-sh setup/install_envs.sh
+bash install.sh
 ```
 
 

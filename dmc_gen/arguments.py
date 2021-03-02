@@ -1,7 +1,9 @@
 import os
+
 from params_proto.neo_proto import ParamsProto, Proto, Flag
 
-print('should run once')
+print('Argument declaration should only run once')
+
 
 class Args(ParamsProto):
     # environment

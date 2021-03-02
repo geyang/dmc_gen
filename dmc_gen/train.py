@@ -1,140 +1,134 @@
 import os
-import time
 
 import gym
 import numpy as np
 import torch
+from tqdm import trange
 
 from dmc_gen import utils
 from dmc_gen import wrappers
 from dmc_gen.algorithms import make_agent
-from dmc_gen.arguments import Args
-from dmc_gen.logger import Logger
-from dmc_gen.video import VideoRecorder
 
 
-def evaluate(env, agent, video, num_episodes, L, step, test_env=False):
-    episode_rewards = []
-    for i in range(num_episodes):
+def evaluate(env, agent, num_episodes, save_video=None):
+    from ml_logger import logger
+
+    episode_rewards, frames = [], []
+    for i in trange(num_episodes, desc="Eval"):
         obs = env.reset()
-        video.init(enabled=(i == 0))
         done = False
         episode_reward = 0
         while not done:
             with utils.eval_mode(agent):
                 action = agent.select_action(obs)
             obs, reward, done, _ = env.step(action)
-            video.record(env)
+            if save_video:
+                frames.append(env.render('rgb_array', width=64, height=64))
             episode_reward += reward
 
-        if L is not None:
-            _test_env = '_test_env' if test_env else ''
-            video.save(f'{step}{_test_env}.mp4')
-            L.log(f'eval/episode_reward{_test_env}', episode_reward, step)
+        if save_video:
+            logger.save_video(frames, key=save_video)
+        logger.store_metrics(episode_reward=episode_reward)
         episode_rewards.append(episode_reward)
 
     return np.mean(episode_rewards)
 
 
-def train(args=Args):
-    """
-    :type args: Args
-    """
-    # Set seed
-    utils.set_seed_everywhere(args.seed)
-    wrappers.VideoWrapper.prefix = args.aug_data_prefix
-    wrappers.ColorWrapper.prefix = args.aug_data_prefix
+def train(deps=None, **kwargs):
+    from ml_logger import logger
+    from dmc_gen.arguments import Args
+
+    Args._update(deps, **kwargs)
+    logger.log_params(Args=vars(Args))
+
+    utils.set_seed_everywhere(Args.seed)
+    wrappers.VideoWrapper.prefix = Args.aug_data_prefix
+    wrappers.ColorWrapper.prefix = Args.aug_data_prefix
 
     # Initialize environments
     gym.logger.set_level(40)
-    image_size = 84 if args.algorithm == 'sac' else 100
+    image_size = 84 if Args.algorithm == 'sac' else 100
     env = wrappers.make_env(
-        domain_name=args.domain_name,
-        task_name=args.task_name,
-        seed=args.seed,
-        episode_length=args.episode_length,
-        action_repeat=args.action_repeat,
+        domain_name=Args.domain_name,
+        task_name=Args.task_name,
+        seed=Args.seed,
+        episode_length=Args.episode_length,
+        action_repeat=Args.action_repeat,
         image_size=image_size,
     )
     test_env = wrappers.make_env(
-        domain_name=args.domain_name,
-        task_name=args.task_name,
-        seed=args.seed + 42,
-        episode_length=args.episode_length,
-        action_repeat=args.action_repeat,
+        domain_name=Args.domain_name,
+        task_name=Args.task_name,
+        seed=Args.seed + 42,
+        episode_length=Args.episode_length,
+        action_repeat=Args.action_repeat,
         image_size=image_size,
-        mode=args.eval_mode
+        mode=Args.eval_mode
     )
 
     # Create working directory
-    work_dir = os.path.join(args.log_dir, args.domain_name + '_' + args.task_name, args.algorithm, str(args.seed))
+    work_dir = os.path.join(Args.log_dir, Args.domain_name + '_' + Args.task_name, Args.algorithm, str(Args.seed))
     print('Working directory:', work_dir)
     assert not os.path.exists(os.path.join(work_dir, 'train.log')), 'specified working directory already exists'
     utils.make_dir(work_dir)
+    print("current working directory", os.getcwd())
     model_dir = utils.make_dir(os.path.join(work_dir, 'model'))
-    video_dir = utils.make_dir(os.path.join(work_dir, 'video'))
-    video = VideoRecorder(video_dir if args.save_video else None, height=448, width=448)
-    utils.write_info(args, os.path.join(work_dir, 'info.log'))
 
     # Prepare agent
     # assert torch.cuda.is_available(), 'must have cuda enabled'
     replay_buffer = utils.ReplayBuffer(
         obs_shape=env.observation_space.shape,
         action_shape=env.action_space.shape,
-        capacity=args.train_steps,
-        batch_size=args.batch_size
+        capacity=Args.train_steps,
+        batch_size=Args.batch_size
     )
-    cropped_obs_shape = (3 * args.frame_stack, 84, 84)
+    cropped_obs_shape = (3 * Args.frame_stack, 84, 84)
     agent = make_agent(
         obs_shape=cropped_obs_shape,
         action_shape=env.action_space.shape,
-        args=args
+        args=Args
     )
 
-    start_step, episode, episode_reward, done = 0, 0, 0, True
-    L = Logger(work_dir)
-    start_time = time.time()
-    for step in range(start_step, args.train_steps + 1):
+    start_step, episode, episode_reward, episode_step, done = 0, 0, 0, 0, True
+    logger.start('train')
+    for step in range(start_step, Args.train_steps + 1):
         if done:
             if step > start_step:
-                L.log('train/duration', time.time() - start_time, step)
-                start_time = time.time()
-                L.dump(step)
+                logger.store_metrics({'train/duration': logger.split('train')})
+                logger.log_metrics_summary(dict(step=step), default_stats='mean')
 
             # Evaluate agent periodically
-            if step % args.eval_freq == 0:
-                print('Evaluating:', work_dir)
-                L.log('eval/episode', episode, step)
-                evaluate(env, agent, video, args.eval_episodes, L, step)
-                evaluate(test_env, agent, video, args.eval_episodes, L, step, test_env=True)
-                L.dump(step)
+            if step % Args.eval_freq == 0:
+                logger.store_metrics(episode=episode)
+                with logger.Prefix(metrics="eval/"):
+                    evaluate(env, agent, Args.eval_episodes, save_video=f"videos/{step:08d}.mp4")
+                with logger.Prefix(metrics="eval/test/"):
+                    evaluate(test_env, agent, Args.eval_episodes, save_video=f"videos/{step:08d}_test.mp4")
+                logger.log_metrics_summary(dict(step=step), default_stats='mean')
 
             # Save agent periodically
-            if step > start_step and step % args.save_freq == 0:
+            if step > start_step and step % Args.save_freq == 0:
+                logger.save_module(agent, f"models/{step:08d}.pkl")
                 torch.save(agent, os.path.join(model_dir, f'{step}.pt'))
 
-            L.log('train/episode_reward', episode_reward, step)
+            logger.store_metrics(episode_reward=episode_reward, episode=episode + 1, prefix="train/")
 
             obs = env.reset()
-            done = False
-            episode_reward = 0
-            episode_step = 0
+            episode_reward, episode_step, done = 0, 0, False
             episode += 1
 
-            L.log('train/episode', episode, step)
-
         # Sample action for data collection
-        if step < args.init_steps:
+        if step < Args.init_steps:
             action = env.action_space.sample()
         else:
             with utils.eval_mode(agent):
                 action = agent.sample_action(obs)
 
         # Run training update
-        if step >= args.init_steps:
-            num_updates = args.init_steps if step == args.init_steps else 1
+        if step >= Args.init_steps:
+            num_updates = Args.init_steps if step == Args.init_steps else 1
             for _ in range(num_updates):
-                agent.update(replay_buffer, L, step)
+                agent.update(replay_buffer, step)
 
         # Take step
         next_obs, reward, done, _ = env.step(action)

@@ -3,8 +3,9 @@ from copy import deepcopy
 import torch
 import torch.nn.functional as F
 
-from ..algorithms import modules as m
-from ..algorithms.sac import SAC
+from dmc_gen.algorithms import modules as m
+from dmc_gen.algorithms.sac import SAC
+from dmc_gen.algorithms import augmentations
 
 
 class SODA(SAC):
@@ -44,7 +45,8 @@ class SODA(SAC):
 
         return F.mse_loss(h0, h1)
 
-    def update_soda(self, replay_buffer, L=None, step=None):
+    def update_soda(self, replay_buffer):
+        from ml_logger import logger
         x = replay_buffer.sample_soda(self.soda_batch_size)
         assert x.size(-1) == 100
 
@@ -59,8 +61,7 @@ class SODA(SAC):
         self.soda_optimizer.zero_grad()
         soda_loss.backward()
         self.soda_optimizer.step()
-        if L is not None:
-            L.log('train/aux_loss', soda_loss, step)
+        logger.store_metrics({'soda/loss': soda_loss})
 
         utils.soft_update_params(
             self.predictor, self.predictor_target,
