@@ -107,20 +107,21 @@ modes:
         LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/.mujoco/mujoco200/bin
         LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/.mujoco/mujoco200_linux/bin
         DMCGEN_DATA=$HOME/mit/dmc_gen/custom_vendor/data
+# needed for mujoco-py
+# export CUDA_VISIBLE_DEVICES=0;
       startup: >-
         mkdir -p /state/partition1/user/$USER/conda;
         cp -r /home/gridsan/$USER/mujoco-py /state/partition1/user/$USER/conda;
         source ~/.bashrc;
         module load cuda/11.0;
         module load anaconda/2020a;
-        nvidia-smi;
         export MUJOCO_GL=egl;
-        export CUDA_VISIBLE_DEVICES=0;
         export LD_PRELOAD=$HOME/vendor/glew/lib/libGLEW.so.2.2.0:/usr/lib/libGL.so.1;
+        export CUDA_VISIBLE_DEVICES=0;
         source activate dmcgen;
       pypath: "{mounts[0].host_path}"
       work_dir: "{mounts[0].host_path}"
-      exclude: d-10-2-1,d-13-6-2,d-9-16-1,d-12-7-1,d-12-14-2,d-12-9-1
+      exclude: d-10-2-1,d-13-6-2,d-9-16-1,d-12-7-1,d-12-14-2,d-12-9-1,d-7-5-2,d-12-6-1,d-8-2-1,d-8-14-2,d-10-11-2,d-9-10-1,d-13-2-1,d-14-5-1,d-10-4-2,d-8-4-1,d-13-11-1,d-10-9-1,d-13-1-2
       # time_limit: "0:0:20"
       mem: 100000
       n_cpu: 8

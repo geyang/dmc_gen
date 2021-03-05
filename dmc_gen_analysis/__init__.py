@@ -172,6 +172,7 @@ def instr(fn, *ARGS, _job_prefix=None, _job_postfix=None, _job_counter=True,
             with logger.SyncContext():  # Make sure uploaded finished before termination.
                 logger.print(tb, color="red")
                 logger.log_text(tb, filename="traceback.err")
+                logger.print(f"{logger.hostname}: {os.environ.get('GPU_DEVICE_ORDINAL', 'N/A')}")
                 logger.log_params(run=dict(status="error", exitTime=logger.now()))
                 logger.flush()
             time.sleep(3)

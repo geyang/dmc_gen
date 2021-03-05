@@ -48,8 +48,8 @@ def main(args):
 	# Initialize environments
 	gym.logger.set_level(40)
 	env = make_env(
-		domain_name=args.domain_name,
-		task_name=args.task_name,
+		domain_name=args.domain,
+		task_name=args.task,
 		seed=args.seed+42,
 		episode_length=args.episode_length,
 		action_repeat=args.action_repeat,
@@ -57,7 +57,7 @@ def main(args):
 	)
 
 	# Set working directory
-	work_dir = os.path.join(args.log_dir, args.domain_name+'_'+args.task_name, args.algorithm, str(args.seed))
+	work_dir = os.path.join(args.log_dir, args.domain + '_' + args.task, args.algo, str(args.seed))
 	print('Working directory:', work_dir)
 	assert os.path.exists(work_dir), 'specified working directory does not exist'
 	model_dir = utils.make_dir(os.path.join(work_dir, 'model'))
@@ -84,10 +84,10 @@ def main(args):
 	print('Reward:', int(reward))
 
 	adapt_reward = None
-	if args.algorithm == 'pad':
+	if args.algo == 'pad':
 		env = make_env(
-			domain_name=args.domain_name,
-			task_name=args.task_name,
+			domain_name=args.domain,
+			task_name=args.task,
 			seed=args.seed+42,
 			episode_length=args.episode_length,
 			action_repeat=args.action_repeat,

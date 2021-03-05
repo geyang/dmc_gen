@@ -40,7 +40,7 @@ class SAC(nn.Module):
         self.critic = m.Critic(critic_encoder, action_shape, args.hidden_dim)  # .to(self.device)
         self.critic_target = deepcopy(self.critic)
 
-        self.log_alpha = torch.tensor(np.log(args.init_temperature), requires_grad=True)  # .to(self.device)
+        self.log_alpha = torch.nn.Parameter(torch.tensor(np.log(args.init_temperature)))  # .to(self.device)
         self.target_entropy = -np.prod(action_shape)
 
         self.actor_optim = torch.optim.Adam(

@@ -2,7 +2,6 @@ import os
 
 import gym
 import numpy as np
-import torch
 from tqdm import trange
 
 from dmc_gen import utils
@@ -41,10 +40,6 @@ def train(deps=None, **kwargs):
     from ml_logger import logger
     from dmc_gen.config import Args
 
-    print("train: cuda is", torch.cuda.is_available())
-    print(kwargs)
-    print(deps)
-
     Args._update(deps, **kwargs)
     logger.log_params(Args=vars(Args))
 
@@ -53,18 +48,18 @@ def train(deps=None, **kwargs):
 
     # Initialize environments
     gym.logger.set_level(40)
-    image_size = 84 if Args.algorithm == 'sac' else 100
+    image_size = 84 if Args.algo == 'sac' else 100
     env = wrappers.make_env(
-        domain_name=Args.domain_name,
-        task_name=Args.task_name,
+        domain_name=Args.domain,
+        task_name=Args.task,
         seed=Args.seed,
         episode_length=Args.episode_length,
         action_repeat=Args.action_repeat,
         image_size=image_size,
     )
     test_env = wrappers.make_env(
-        domain_name=Args.domain_name,
-        task_name=Args.task_name,
+        domain_name=Args.domain,
+        task_name=Args.task,
         seed=Args.seed + 42,
         episode_length=Args.episode_length,
         action_repeat=Args.action_repeat,
@@ -72,27 +67,20 @@ def train(deps=None, **kwargs):
         mode=Args.eval_mode
     )
 
-    # Create working directory
-    work_dir = os.path.join(Args.log_dir, Args.domain_name + '_' + Args.task_name, Args.algorithm, str(Args.seed))
-    print('Working directory:', work_dir)
-    assert not os.path.exists(os.path.join(work_dir, 'train.log')), 'specified working directory already exists'
-    utils.make_dir(work_dir)
-    print("current working directory", os.getcwd())
-    model_dir = utils.make_dir(os.path.join(work_dir, 'model'))
-
     # Prepare agent
-    replay_buffer = utils.ReplayBuffer(
-        obs_shape=env.observation_space.shape,
-        action_shape=env.action_space.shape,
-        capacity=Args.train_steps,
-        batch_size=Args.batch_size
-    )
     cropped_obs_shape = (3 * Args.frame_stack, 84, 84)
     agent = make_agent(
         obs_shape=cropped_obs_shape,
         action_shape=env.action_space.shape,
         args=Args
     ).to(Args.device)
+
+    replay_buffer = utils.ReplayBuffer(
+        obs_shape=env.observation_space.shape,
+        action_shape=env.action_space.shape,
+        capacity=Args.train_steps,
+        batch_size=Args.batch_size
+    )
 
     start_step, episode, episode_reward, episode_step, done = 0, 0, 0, 0, True
     logger.start('train')
@@ -113,9 +101,9 @@ def train(deps=None, **kwargs):
 
             # Save agent periodically
             if step > start_step and step % Args.save_freq == 0:
-                logger.save_module(agent, f"models/{step:06d}.pkl")
+                logger.save_module(agent, f"models/{step:06d}.pkl", chunk=2_000_000)
                 logger.remove(f"models/{step - Args.save_freq:06d}.pkl")
-                torch.save(agent, os.path.join(model_dir, f'{step}.pt'))
+                # torch.save(agent, os.path.join(model_dir, f'{step}.pt'))
 
             logger.store_metrics(episode_reward=episode_reward, episode=episode + 1, prefix="train/")
 
@@ -145,7 +133,7 @@ def train(deps=None, **kwargs):
 
         episode_step += 1
 
-    print('Completed training for', work_dir)
+    logger.print(f'Completed training for {Args.domain}_{Args.task}/{Args.algo}/{Args.seed}')
 
 
 if __name__ == '__main__':

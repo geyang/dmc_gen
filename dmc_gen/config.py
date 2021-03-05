@@ -2,23 +2,20 @@ import torch
 from params_proto.neo_proto import ParamsProto, Proto, Flag
 
 print('Argument declaration should only run once')
-print(torch.cuda.is_available())
 
 
 class Args(ParamsProto):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print('cuda is ', device)
-
     # environment
-    domain_name = 'walker'
-    task_name = 'walk'
+    domain = 'walker'
+    task = 'walk'
     frame_stack = Proto(3, dtype=int)
     action_repeat = Proto(4, dtype=int)
     episode_length = Proto(1000, dtype=int)
     eval_mode = Proto('color_hard', dtype=str)
 
     # agent
-    algorithm = Proto('sac', dtype=str)
+    algo = Proto('sac', dtype=str)
     train_steps = Proto(500_000, dtype=int)
     discount = Proto(0.99, dtype=float)
     init_steps = Proto(1000, dtype=int)
@@ -70,8 +67,8 @@ class Args(ParamsProto):
     save_video = Flag(False)
 
     def __init__(self):
-        assert self.algorithm in {'sac', 'rad', 'curl', 'pad', 'soda'}, \
-            f'specified algorithm "{self.algorithm}" is not supported'
+        assert self.algo in {'sac', 'rad', 'curl', 'pad', 'soda'}, \
+            f'specified algorithm "{self.algo}" is not supported'
 
         assert self.eval_mode in {'train', 'color_easy', 'color_hard', 'video_easy',
                                   'video_hard'}, f'specified mode "{self.eval_mode}" is not supported'
