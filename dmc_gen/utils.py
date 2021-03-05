@@ -3,7 +3,7 @@ import numpy as np
 import os
 import json
 import random
-from dmc_gen import augmentations
+from dmc_gen.algorithms import augmentations
 from datetime import datetime
 
 

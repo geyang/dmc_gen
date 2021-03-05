@@ -10,7 +10,7 @@ class CURL(SAC):
         super().__init__(obs_shape, action_shape, args)
         self.aux_update_freq = args.aux_update_freq
 
-        self.curl_head = m.CURLHead(self.critic.encoder).cuda()
+        self.curl_head = m.CURLHead(self.critic.encoder).to(self.device)
 
         self.curl_optimizer = torch.optim.Adam(
             self.curl_head.parameters(), lr=args.aux_lr, betas=(args.aux_beta, 0.999)
@@ -31,7 +31,7 @@ class CURL(SAC):
             z_pos = self.critic_target.encoder(x_pos)
 
         logits = self.curl_head.compute_logits(z_a, z_pos)
-        labels = torch.arange(logits.shape[0]).long().cuda()
+        labels = torch.arange(logits.shape[0]).long().to(self.device)
         curl_loss = F.cross_entropy(logits, labels)
 
         self.curl_optimizer.zero_grad()

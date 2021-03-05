@@ -13,13 +13,13 @@ class PAD(SAC):
         self.aux_beta = args.aux_beta
 
         shared_cnn = self.critic.encoder.shared_cnn
-        aux_cnn = m.HeadCNN(shared_cnn.out_shape, args.num_head_layers, args.num_filters).cuda()
+        aux_cnn = m.HeadCNN(shared_cnn.out_shape, args.num_head_layers, args.num_filters).to(self.device)
         aux_encoder = m.Encoder(
             shared_cnn,
             aux_cnn,
             m.RLProjection(aux_cnn.out_shape, args.projection_dim)
         )
-        self.pad_head = m.InverseDynamics(aux_encoder, action_shape, args.hidden_dim).cuda()
+        self.pad_head = m.InverseDynamics(aux_encoder, action_shape, args.hidden_dim).to(self.device)
         self.init_pad_optimizer()
         self.train()
 

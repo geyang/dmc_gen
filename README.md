@@ -1,5 +1,7 @@
 # DMControl Generalization Benchmark
-This code base is a fork-in-progress from [Hansen & Wang 2020](https://arxiv.org/abs/2011.13389. Benchmark for generalization in continuous control from pixels based on [DMControl](https://github.com/deepmind/dm_control).
+This code base is a fork-in-progress from [Hansen & Wang 2020](https://arxiv.org/abs/2011.13389)'s 
+
+The [./custom_vendor](./custom_vendor) folder contains the benchmark for generalization in continuous control from pixels based on [DMControl](https://github.com/deepmind/dm_control). Installation guide for these custom library could be found [there](./custom_vendor).
 
  
 
@@ -19,14 +21,13 @@ using standardized architecture and hyper-parameters, wherever applicable.
 
 We assume that you have access to a GPU with CUDA >=9.2 support. All dependencies can then be installed with the following commands:
 
-```
+```bash
 conda env create -f conda.yml
 conda activate dmcgen
-bash install.sh
 ```
 
+### Datasets Needed for Envs
 
-## Datasets
 Part of this repository relies on external datasets. SODA uses the [Places](http://places2.csail.mit.edu/download.html) dataset for data augmentation, which can be downloaded by running
 
 ```
@@ -36,6 +37,12 @@ wget http://data.csail.mit.edu/places/places365/places365standard_easyformat.tar
 You should familiarize yourself with [their terms](http://places2.csail.mit.edu/download.html) before downloading. After downloading and extracting the data, add your dataset directory to the `data_dirs` list in `src/augmentations.py`.
 
 The `video_easy` environment was proposed in [PAD](https://github.com/nicklashansen/policy-adaptation-during-deployment), and the `video_hard` environment uses a subset of the [RealEstate10K](https://google.github.io/realestate10k/) dataset for background rendering. All test environments (including video files) are included in this repository, namely in the `src/env/` directory.
+
+```bash
+cd custom_vendor && make
+```
+
+Remember to add `export DMCGEN_DATA=$($PWD)/custom_vendor/data` environment variable to point to the location of this folder.
 
 
 ## Training & Evaluation

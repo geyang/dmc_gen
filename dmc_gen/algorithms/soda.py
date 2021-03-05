@@ -23,7 +23,7 @@ class SODA(SAC):
             m.SODAMLP(aux_cnn.out_shape[0], args.projection_dim, args.projection_dim)
         )
 
-        self.predictor = m.SODAPredictor(soda_encoder, args.projection_dim).cuda()
+        self.predictor = m.SODAPredictor(soda_encoder, args.projection_dim).to(self.device)
         self.predictor_target = deepcopy(self.predictor)
 
         self.soda_optimizer = torch.optim.Adam(

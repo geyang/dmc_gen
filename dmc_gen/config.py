@@ -1,16 +1,17 @@
-import os
-
+import torch
 from params_proto.neo_proto import ParamsProto, Proto, Flag
 
 print('Argument declaration should only run once')
+print(torch.cuda.is_available())
 
 
 class Args(ParamsProto):
-    # environment
-    aug_data_prefix = os.path.dirname(__file__) + "/../custom_vendor/data"
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print('cuda is ', device)
 
-    domain_name = Proto('walker')
-    task_name = Proto('walk')
+    # environment
+    domain_name = 'walker'
+    task_name = 'walk'
     frame_stack = Proto(3, dtype=int)
     action_repeat = Proto(4, dtype=int)
     episode_length = Proto(1000, dtype=int)
@@ -59,7 +60,7 @@ class Args(ParamsProto):
     soda_tau = Proto(0.005, dtype=float)
 
     # eval
-    save_freq = Proto(100_000, dtype=int)
+    save_freq = Proto(10_000, dtype=int)
     eval_freq = Proto(10_000, dtype=int)
     eval_episodes = Proto(30, dtype=int)
 

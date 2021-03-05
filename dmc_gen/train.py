@@ -34,16 +34,22 @@ def evaluate(env, agent, num_episodes, save_video=None):
     return np.mean(episode_rewards)
 
 
+DMCGEN_DATA = os.environ.get('DMCGEN_DATA', os.environ['HOME'] + "/mit/dmc_gen/custom_vendor/data")
+
+
 def train(deps=None, **kwargs):
     from ml_logger import logger
-    from dmc_gen.arguments import Args
+    from dmc_gen.config import Args
+
+    print("train: cuda is", torch.cuda.is_available())
+    print(kwargs)
+    print(deps)
 
     Args._update(deps, **kwargs)
     logger.log_params(Args=vars(Args))
 
     utils.set_seed_everywhere(Args.seed)
-    wrappers.VideoWrapper.prefix = Args.aug_data_prefix
-    wrappers.ColorWrapper.prefix = Args.aug_data_prefix
+    wrappers.VideoWrapper.prefix = wrappers.ColorWrapper.prefix = DMCGEN_DATA
 
     # Initialize environments
     gym.logger.set_level(40)
@@ -75,7 +81,6 @@ def train(deps=None, **kwargs):
     model_dir = utils.make_dir(os.path.join(work_dir, 'model'))
 
     # Prepare agent
-    # assert torch.cuda.is_available(), 'must have cuda enabled'
     replay_buffer = utils.ReplayBuffer(
         obs_shape=env.observation_space.shape,
         action_shape=env.action_space.shape,
@@ -87,7 +92,7 @@ def train(deps=None, **kwargs):
         obs_shape=cropped_obs_shape,
         action_shape=env.action_space.shape,
         args=Args
-    )
+    ).to(Args.device)
 
     start_step, episode, episode_reward, episode_step, done = 0, 0, 0, 0, True
     logger.start('train')
@@ -108,7 +113,8 @@ def train(deps=None, **kwargs):
 
             # Save agent periodically
             if step > start_step and step % Args.save_freq == 0:
-                logger.save_module(agent, f"models/{step:08d}.pkl")
+                logger.save_module(agent, f"models/{step:06d}.pkl")
+                logger.remove(f"models/{step - Args.save_freq:06d}.pkl")
                 torch.save(agent, os.path.join(model_dir, f'{step}.pt'))
 
             logger.store_metrics(episode_reward=episode_reward, episode=episode + 1, prefix="train/")
@@ -143,6 +149,4 @@ def train(deps=None, **kwargs):
 
 
 if __name__ == '__main__':
-    from dmc_gen.arguments import Args
-
-    train(args=Args)
+    train()
