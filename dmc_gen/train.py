@@ -94,7 +94,7 @@ def train(deps=None, **kwargs):
             if step % Args.eval_freq == 0:
                 logger.store_metrics(episode=episode)
                 with logger.Prefix(metrics="eval/"):
-                    evaluate(env, agent, Args.eval_episodes, save_video=f"videos/{step:08d}.mp4")
+                    evaluate(env, agent, Args.eval_episodes, save_video=f"videos/{step:08d}_train.mp4")
                 with logger.Prefix(metrics="eval/test/"):
                     evaluate(test_env, agent, Args.eval_episodes, save_video=f"videos/{step:08d}_test.mp4")
                 logger.log_metrics_summary(dict(step=step), default_stats='mean')

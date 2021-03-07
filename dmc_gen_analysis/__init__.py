@@ -1,13 +1,14 @@
 import inspect
 import os
+from functools import reduce
+from os.path import dirname, abspath, basename
+
 import yaml
-from functools import reduce, partial
-from ml_logger import logger
-from os.path import basename, dirname, abspath, join
+from ml_logger import pJoin
 from params_proto.neo_proto import ParamsProto, Accumulant
 from termcolor import cprint
 
-with open(os.path.join(os.path.dirname(__file__), ".yours"), 'r') as stream:
+with open(pJoin(dirname(__file__), ".yours"), 'r') as stream:
     rc = yaml.load(stream, Loader=yaml.BaseLoader)
 
 
@@ -16,29 +17,59 @@ class RUN(ParamsProto):
     to directly specify the job prefix."""
 
     server = "http://54.71.92.65:8080"
+    username = rc.get('username', None)
+    project = rc.get('project', None)
 
-    run_prefix = f"{rc['username']}/{rc['project']}/{logger.now('%Y/%m-%d')}"
+    prefix = "{username}/{project}/{now:%Y/%m-%d}/{file_stem}/{job_name}"
 
-    job_prefix = None
-    job_postfix = None
-    job_counter = Accumulant(-1)
+    job_name = "{job_prefix}/{job_postfix}"
+    job_prefix = '{now:%H.%M.%S}'
+    job_postfix = '{job_counter}'
+    job_counter = Accumulant(None)
 
     readme = None
 
     # noinspection PyMissingConstructor
     @classmethod
-    def __init__(cls, job_counter=None, **kwargs):
+    def __init__(cls, job_counter=True, **kwargs):
         cls._update(**kwargs)
 
-        if cls.job_counter is None:
-            return
+        if job_counter is None:
+            pass
         elif job_counter is False:
             cls.job_counter = None
-        elif job_counter is True:
-            cls.job_counter += 1
-        elif isinstance(job_counter, int):
-            # fuck python -- bool is subtype of int. Fuck guido.
+        elif cls.job_counter is None:
+            cls.job_counter = 0
+        # fuck python -- bool is subtype of int. Fuck guido.
+        elif isinstance(job_counter, int) and not isinstance(job_counter, bool):
             cls.job_counter = job_counter
+        else:
+            cls.job_counter += 1
+
+        cls.job_prefix = pJoin(*cls.job_prefix.format(**vars(cls)).split('/'))
+        cls.job_postfix = pJoin(*cls.job_postfix.format(**vars(cls)).split('/'))
+        cls.job_name = pJoin(*cls.job_name.format(**vars(cls)).split('/'))
+        cls.prefix = pJoin(*cls.prefix.format(**vars(cls)).split('/'))
+
+
+# if __name__ == '__main__':
+#     RUN(job_counter=None)
+#     assert RUN.job_counter is None
+#
+#     RUN(job_counter=True)
+#     assert RUN.job_counter is 0
+#
+#     RUN(job_counter=True)
+#     assert RUN.job_counter == 1
+#
+#     RUN(job_counter=True)
+#     assert RUN.job_counter == 2
+#
+#     RUN(job_counter=0)
+#     assert RUN.job_counter == 0
+#
+#     RUN(job_counter=10)
+#     assert RUN.job_counter == 10
 
 
 def dir_prefix(depth=-1):
@@ -47,7 +78,7 @@ def dir_prefix(depth=-1):
     caller_script = abspath(inspect.getmodule(inspect.stack()[1][0]).__file__)
     # note: for scripts in the `plan2vec` module this also works -- b/c we truncate fixed depth.
     script_path = logger.truncate(caller_script, depth=len(__file__.split('/')) - 1)
-    prefix = os.path.join(RUN.run_prefix, script_path)
+    prefix = pJoin(RUN.prefix, script_path)
     return reduce(lambda p, i: dirname(p), range(-depth), prefix)
 
 
@@ -59,14 +90,16 @@ def config_charts(config_yaml, path=".charts.yml"):
 
         try:
             caller_script = abspath(inspect.getmodule(inspect.stack()[1][0]).__file__)
-            cwd = os.path.dirname(caller_script)
+            cwd = dirname(caller_script)
         except:
             cwd = os.getcwd()
 
     logger.log_text(dedent(config_yaml).lstrip(), path)
 
 
-def instr(fn, *ARGS, _job_prefix=None, _job_postfix=None, _job_counter=True,
+def instr(fn, *ARGS,
+          _prefix=None, _job_name=None, _job_prefix=None, _job_postfix=None,
+          _job_counter=True,
           _job_readme=None, _run_readme=None, __file=False, __silent=False, **KWARGS):
     """
     thunk for configuring the logger. The reason why this is not a decorator is
@@ -87,13 +120,10 @@ def instr(fn, *ARGS, _job_prefix=None, _job_postfix=None, _job_counter=True,
     :param **KWARGS: keyword arguments for the call
     :return: a thunk that can be called without parameters
     """
-    import jaynes
     from ml_logger import logger
 
-    RUN(**{k[1:]: v for k, v in locals().items() if k.startswith("_job") and v})
-
     if __file:
-        caller_script = os.path.join(os.getcwd(), __file)
+        caller_script = pJoin(os.getcwd(), __file)
     else:
         launch_module = inspect.getmodule(inspect.stack()[1][0])
         __file = launch_module.__file__
@@ -102,11 +132,12 @@ def instr(fn, *ARGS, _job_prefix=None, _job_postfix=None, _job_counter=True,
     # note: for scripts in the `plan2vec` module this also works -- b/c we truncate fixed depth.
     script_path = logger.truncate(caller_script, depth=len(__file__.split('/')) - 1)
     file_stem = logger.stem(script_path)
-    file_name = os.path.basename(file_stem)
+    file_name = basename(file_stem)
 
-    job_name = join(RUN.job_prefix or "", jaynes.RUN.now('%H.%M.%S'),
-                    RUN.job_postfix or "", "" if RUN.job_counter is None else str(RUN.job_counter))
-    PREFIX = join(RUN.run_prefix, file_stem, job_name)
+    RUN(file_name=file_name, file_stem=file_stem, now=logger.now(),
+        **{k[1:]: v for k, v in locals().items() if k.startswith("_job") and v})
+
+    PREFIX = RUN.prefix
 
     # todo: there should be a better way to log these.
     # todo: we shouldn't need to log to the same directory, and the directory for the run shouldn't be fixed.
@@ -128,7 +159,7 @@ def instr(fn, *ARGS, _job_prefix=None, _job_postfix=None, _job_counter=True,
         silent=__silent)
 
     logger.print('taking diff, if this step takes too long, check if your '
-                 'uncommited changes are too large.', color="green")
+                 'uncommitted changes are too large.', color="green")
     logger.diff()
     if RUN.readme:
         logger.log_text(RUN.readme, "README.md", dedent=True)
@@ -137,7 +168,7 @@ def instr(fn, *ARGS, _job_prefix=None, _job_postfix=None, _job_counter=True,
     if jaynes.RUN.config and jaynes.RUN.mode != "local":
         runner_class, runner_args = jaynes.RUN.config['runner']
         if 'name' in runner_args:  # ssh mode does not have 'name'.
-            runner_args['name'] = join(file_name, job_name)
+            runner_args['name'] = pJoin(file_name, RUN.job_name)
         del logger, jaynes, runner_args, runner_class
         if not __file:
             cprint(f'Set up job name', "green")
@@ -146,13 +177,13 @@ def instr(fn, *ARGS, _job_prefix=None, _job_postfix=None, _job_counter=True,
         import traceback
         from ml_logger import logger
 
+        print(PREFIX)
+
         assert not (args and ARGS), f"can not use position argument at " \
                                     f"both thunk creation as well as run.\n" \
                                     f"_args: {args}\nARGS: {ARGS}"
 
         logger.configure(root_dir=RUN.server, prefix=PREFIX, register_experiment=False, max_workers=10)
-        # from playground import mpi
-        # if not mpi.tools.proc_id():
         logger.log_params(host=dict(hostname=logger.hostname),
                           run=dict(status="running", startTime=logger.now(), job_id=logger.job_id))
 
@@ -163,7 +194,7 @@ def instr(fn, *ARGS, _job_prefix=None, _job_postfix=None, _job_counter=True,
 
             results = fn(*(args or ARGS), **_KWARGS)
 
-            logger.log_line("========= execution is complete ==========")
+            logger.log_line("========== execution is complete ==========")
             logger.log_params(run=dict(status="completed", completeTime=logger.now()))
             logger.flush()
             time.sleep(3)
