@@ -16,6 +16,7 @@ class Args(ParamsProto):
 
     # agent
     algo = Proto('sac', dtype=str)
+
     train_steps = Proto(500_000, dtype=int)
     discount = Proto(0.99, dtype=float)
     init_steps = Proto(1000, dtype=int)
@@ -57,23 +58,29 @@ class Args(ParamsProto):
     soda_tau = Proto(0.005, dtype=float)
 
     # eval
-    save_freq = Proto(10_000, dtype=int)
     eval_freq = Proto(10_000, dtype=int)
     eval_episodes = Proto(30, dtype=int)
+
+    # checkpointing
+    start_step = 0
+    load_checkpoint = None
+    save_freq = Proto(10_000, dtype=int, help="save frequency, in environment steps")
+    save_last = True
 
     # misc
     seed = 100
     log_dir = 'logs'
     save_video = Flag(False)
 
-    def __init__(self):
-        assert self.algo in {'sac', 'rad', 'curl', 'pad', 'soda'}, \
-            f'specified algorithm "{self.algo}" is not supported'
+    @classmethod
+    def __init__(cls):
+        assert cls.algo in {'sac', 'rad', 'curl', 'pad', 'soda'}, \
+            f'specified algorithm "{cls.algo}" is not supported'
 
-        assert self.eval_mode in {'train', 'color_easy', 'color_hard', 'video_easy',
-                                  'video_hard'}, f'specified mode "{self.eval_mode}" is not supported'
-        assert self.seed is not None, 'must provide seed for experiment'
-        assert self.log_dir is not None, 'must provide a log directory for experiment'
+        assert cls.eval_mode in {'train', 'color_easy', 'color_hard', 'video_easy',
+                                 'video_hard'}, f'specified mode "{cls.eval_mode}" is not supported'
+        assert cls.seed is not None, 'must provide seed for experiment'
+        assert cls.log_dir is not None, 'must provide a log directory for experiment'
 
 
 def parse_args():

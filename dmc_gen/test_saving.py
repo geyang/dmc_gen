@@ -38,7 +38,7 @@ def evaluate(env, agent, num_episodes, save_video=None):
 DMCGEN_DATA = os.environ.get('DMCGEN_DATA', os.environ['HOME'] + "/mit/dmc_gen/custom_vendor/data")
 
 
-def train(deps=None, **kwargs):
+def test_saving(deps=None, **kwargs):
     from ml_logger import logger
     from dmc_gen.config import Args
 
@@ -76,14 +76,6 @@ def train(deps=None, **kwargs):
         args=Args
     ).to(Args.device)
 
-    step = 0
-    with logger.Sync():
-        logger.print('logging the model')
-        logger.save_module(agent, f"models/{step:06d}.pkl")
-
-    logger.print('finished')
-    return
-
     if Args.load_checkpoint:
         print('Loading from checkpoint:', Args.load_checkpoint)
         logger.load_module(agent, path="models/*.pkl", wd=Args.load_checkpoint, map_location=Args.device)
@@ -100,58 +92,14 @@ def train(deps=None, **kwargs):
     episode, episode_reward, episode_step, done = 0, 0, 0, True
     logger.start('train')
     for step in range(Args.start_step, Args.train_steps + 1):
-        if done:
-            if step > Args.start_step:
-                logger.store_metrics({'dt_epoch': logger.split('train')})
-                logger.log_metrics_summary(dict(step=step), default_stats='mean')
-
-            # Evaluate agent periodically
-            if step % Args.eval_freq == 0:
-                logger.store_metrics(episode=episode)
-                with logger.Prefix(metrics="eval/"):
-                    evaluate(env, agent, Args.eval_episodes, save_video=f"videos/{step:08d}_train.mp4")
-                with logger.Prefix(metrics="test/"):
-                    evaluate(test_env, agent, Args.eval_episodes, save_video=f"videos/{step:08d}_test.mp4")
-                logger.log_metrics_summary(dict(step=step), default_stats='mean')
-
+        if step %
             # Save agent periodically
             if step > Args.start_step and step % Args.save_freq == 0:
-                with logger.Sync():
-                    logger.save_module(agent, f"models/{step:06d}.pkl")
-                if Args.save_last:
-                    logger.remove(f"models/{step - Args.save_freq:06d}.pkl")
+                logger.save_module(agent, f"models/{step:06d}.pkl")
+                logger.remove(f"models/{step - Args.save_freq:06d}.pkl")
                 # torch.save(agent, os.path.join(model_dir, f'{step}.pt'))
 
-            logger.store_metrics(episode_reward=episode_reward, episode=episode + 1, prefix="train/")
-
-            obs = env.reset()
-            episode_reward, episode_step, done = 0, 0, False
-            episode += 1
-
-        # Sample action for data collection
-        if step < Args.init_steps:
-            action = env.action_space.sample()
-        else:
-            with utils.eval_mode(agent):
-                action = agent.sample_action(obs)
-
-        # Run training update
-        if step >= Args.init_steps:
-            num_updates = Args.init_steps if step == Args.init_steps else 1
-            for _ in range(num_updates):
-                agent.update(replay_buffer, step)
-
-        # Take step
-        next_obs, reward, done, _ = env.step(action)
-        done_bool = 0 if episode_step + 1 == env._max_episode_steps else float(done)
-        replay_buffer.add(obs, action, reward, next_obs, done_bool)
-        episode_reward += reward
-        obs = next_obs
-
-        episode_step += 1
-
-    logger.print(f'Completed training for {Args.domain}_{Args.task}/{Args.algo}/{Args.seed}')
 
 
 if __name__ == '__main__':
-    train()
+    test_saving()

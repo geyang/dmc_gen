@@ -2,9 +2,10 @@ import inspect
 import os
 from functools import reduce
 from os.path import dirname, abspath, basename
+from typing import Union
 
 import yaml
-from ml_logger import pJoin
+from ml_logger import pJoin, now
 from params_proto.neo_proto import ParamsProto, Accumulant
 from termcolor import cprint
 
@@ -17,21 +18,23 @@ class RUN(ParamsProto):
     to directly specify the job prefix."""
 
     server = "http://54.71.92.65:8080"
+
     username = rc.get('username', None)
     project = rc.get('project', None)
 
     prefix = "{username}/{project}/{now:%Y/%m-%d}/{file_stem}/{job_name}"
-
     job_name = "{job_prefix}/{job_postfix}"
-    job_prefix = '{now:%H.%M.%S}'
+    job_prefix = now('%H.%M.%S')
     job_postfix = '{job_counter}'
     job_counter = Accumulant(None)
+
+    overwrite = False
 
     readme = None
 
     # noinspection PyMissingConstructor
     @classmethod
-    def __init__(cls, job_counter=True, **kwargs):
+    def __init__(cls, job_counter: Union[None, bool, int] = True, **kwargs):
         cls._update(**kwargs)
 
         if job_counter is None:
@@ -46,30 +49,32 @@ class RUN(ParamsProto):
         else:
             cls.job_counter += 1
 
-        cls.job_prefix = pJoin(*cls.job_prefix.format(**vars(cls)).split('/'))
-        cls.job_postfix = pJoin(*cls.job_postfix.format(**vars(cls)).split('/'))
-        cls.job_name = pJoin(*cls.job_name.format(**vars(cls)).split('/'))
-        cls.prefix = pJoin(*cls.prefix.format(**vars(cls)).split('/'))
+        data = vars(cls)
+        while "{" in data['prefix']:
+            data = {k: v.format(**data) if isinstance(v, str) else v for k, v in data.items()}
+
+        cls.JOB_NAME = data['job_name']
+        cls.PREFIX = data['prefix']
 
 
-# if __name__ == '__main__':
-#     RUN(job_counter=None)
-#     assert RUN.job_counter is None
-#
-#     RUN(job_counter=True)
-#     assert RUN.job_counter is 0
-#
-#     RUN(job_counter=True)
-#     assert RUN.job_counter == 1
-#
-#     RUN(job_counter=True)
-#     assert RUN.job_counter == 2
-#
-#     RUN(job_counter=0)
-#     assert RUN.job_counter == 0
-#
-#     RUN(job_counter=10)
-#     assert RUN.job_counter == 10
+if __name__ == '__main__':
+    RUN(job_counter=None)
+    assert RUN.job_counter is None
+
+    RUN()
+    assert RUN.job_counter is 0
+
+    RUN()
+    assert RUN.job_counter == 1
+
+    RUN(job_counter=True)
+    assert RUN.job_counter == 2
+
+    RUN(job_counter=0)
+    assert RUN.job_counter == 0
+
+    RUN(job_counter=10)
+    assert RUN.job_counter == 10
 
 
 def dir_prefix(depth=-1):
@@ -98,9 +103,10 @@ def config_charts(config_yaml, path=".charts.yml"):
 
 
 def instr(fn, *ARGS,
-          _prefix=None, _job_name=None, _job_prefix=None, _job_postfix=None,
-          _job_counter=True,
-          _job_readme=None, _run_readme=None, __file=False, __silent=False, **KWARGS):
+          _prefix=None,
+          _job_readme=None,
+          _run_readme=None,
+          __file=False, __silent=False, **KWARGS):
     """
     thunk for configuring the logger. The reason why this is not a decorator is
 
@@ -134,15 +140,17 @@ def instr(fn, *ARGS,
     file_stem = logger.stem(script_path)
     file_name = basename(file_stem)
 
-    RUN(file_name=file_name, file_stem=file_stem, now=logger.now(),
-        **{k[1:]: v for k, v in locals().items() if k.startswith("_job") and v})
+    RUN(file_name=file_name, file_stem=file_stem, now=logger.now())
 
-    PREFIX = RUN.prefix
+    PREFIX = RUN.PREFIX
 
     # todo: there should be a better way to log these.
     # todo: we shouldn't need to log to the same directory, and the directory for the run shouldn't be fixed.
     logger.configure(root_dir=RUN.server, prefix=PREFIX, asynchronous=False,  # use sync logger
                      max_workers=4, register_experiment=False)
+    if RUN.overwrite:
+        with logger.Sync():
+            logger.remove(".")
     logger.upload_file(caller_script)
     # the tension is in between creation vs run. Code snapshot are shared, but runs need to be unique.
     _ = dict()
@@ -168,7 +176,7 @@ def instr(fn, *ARGS,
     if jaynes.RUN.config and jaynes.RUN.mode != "local":
         runner_class, runner_args = jaynes.RUN.config['runner']
         if 'name' in runner_args:  # ssh mode does not have 'name'.
-            runner_args['name'] = pJoin(file_name, RUN.job_name)
+            runner_args['name'] = pJoin(file_name, RUN.JOB_NAME)
         del logger, jaynes, runner_args, runner_class
         if not __file:
             cprint(f'Set up job name', "green")
@@ -177,11 +185,10 @@ def instr(fn, *ARGS,
         import traceback
         from ml_logger import logger
 
-        print(PREFIX)
-
-        assert not (args and ARGS), f"can not use position argument at " \
-                                    f"both thunk creation as well as run.\n" \
-                                    f"_args: {args}\nARGS: {ARGS}"
+        assert not (args and ARGS), \
+            f"can not use position argument at both thunk creation as well as run.\n" \
+            f"_args: {args}\n" \
+            f"ARGS: {ARGS}\n"
 
         logger.configure(root_dir=RUN.server, prefix=PREFIX, register_experiment=False, max_workers=10)
         logger.log_params(host=dict(hostname=logger.hostname),

@@ -101,9 +101,10 @@ modes:
     mounts:
       - *supercloud_code_mount
     runner: !runners.Slurm
+      name: dmcgen
       envs: >-
         LC_CTYPE=en_US.UTF-8 LANG=en_US.UTF-8 LANGUAGE=en_US
-        HTTP_PROXY=http://login-2:8081
+        HTTP_PROXY=http://login-3:8081
         LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/.mujoco/mujoco200/bin
         LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/.mujoco/mujoco200_linux/bin
         DMCGEN_DATA=$HOME/mit/dmc_gen/custom_vendor/data
