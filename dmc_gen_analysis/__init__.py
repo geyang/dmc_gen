@@ -17,7 +17,7 @@ class RUN(ParamsProto):
     """The main point of this config object is to provide a way for config functions
     to directly specify the job prefix."""
 
-    server = "http://54.71.92.65:8080"
+    server = "http://54.71.92.65:9080"
 
     username = rc.get('username', None)
     project = rc.get('project', None)

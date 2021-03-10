@@ -19,37 +19,38 @@ if __name__ == '__main__':
         # "improbable010",
     ]
 
-    if 'pydevd' in sys.modules and False:
+    if 'pydevd' in sys.modules:
         jaynes.config("local")
     else:
         jaynes.config("supercloud", )
-        with Sweep(Args) as sweep, sweep.product:
-            with sweep.zip:
-                Args.domain = ['walker', 'cartpole', 'ball_in_cup', 'finger']
-                Args.task = ['walk', 'swingup', 'catch', 'spin']
-            Args.algo = ['curl', 'rad']
-            Args.seed = [100]
 
-        for i, args in enumerate(sweep[:1]):
-            # jaynes.config("vision", launch=dict(ip=ms[i]))
-            RUN.job_postfix = f"{Args.domain}-{Args.task}/{Args.algo}/{Args.seed}"
-            thunk = instr(train, args, _job_counter=False)
-            logger.log_text("""
-            keys:
-            - Args.domain
-            - Args.task
-            - Args.algo
-            - Args.seed
-            charts:
-            - yKey: "episode_reward/mean"
-              xKey: step
-            - yKey: "train/episode_reward/mean"
-              xKey: step
-            - type: video
-              glob: videos/*_train.mp4
-            - type: video
-              glob: videos/*_test.mp4
-            """, ".charts.yml", overwrite=True, dedent=True)
-            jaynes.run(thunk)
+    with Sweep(Args) as sweep, sweep.product:
+        with sweep.zip:
+            Args.domain = ['walker', 'cartpole', 'ball_in_cup', 'finger']
+            Args.task = ['walk', 'swingup', 'catch', 'spin']
+        Args.algo = ['curl', 'rad']
+        Args.seed = [100]
+
+    for i, args in enumerate(sweep[:1]):
+        # jaynes.config("vision", launch=dict(ip=ms[i]))
+        RUN.job_postfix = f"{Args.domain}-{Args.task}/{Args.algo}/{Args.seed}"
+        thunk = instr(train, args, _job_counter=False)
+        logger.log_text("""
+                    keys:
+                    - Args.domain
+                    - Args.task
+                    - Args.algo
+                    - Args.seed
+                    charts:
+                    - yKey: "episode_reward/mean"
+                    xKey: step
+                    - yKey: "train/episode_reward/mean"
+                    xKey: step
+                    - type: video
+                    glob: videos/*_train.mp4
+                    - type: video
+                    glob: videos/*_test.mp4
+                    """, ".charts.yml", overwrite=True, dedent=True)
+        jaynes.run(thunk)
 
     jaynes.listen()

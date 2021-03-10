@@ -78,6 +78,8 @@ def train(deps=None, **kwargs):
 
     step = 0
     with logger.Sync():
+        logger.print('remove the existing file')
+        logger.remove('models')
         logger.print('logging the model')
         logger.save_module(agent, f"models/{step:06d}.pkl")
 

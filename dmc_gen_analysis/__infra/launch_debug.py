@@ -24,7 +24,7 @@ def torch_upload():
     from ml_logger import logger
     import numpy as np
 
-    logger.configure(root_dir="http://54.71.92.65:8080", prefix="geyang/ml_logger-debug/test-1",
+    logger.configure(root_dir="http://54.71.92.65:9080", prefix="geyang/ml_logger-debug/test-1",
                      register_experiment=True)
     logger.log_params(args={})
 
