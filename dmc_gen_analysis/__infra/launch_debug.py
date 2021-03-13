@@ -29,11 +29,42 @@ def torch_upload():
     logger.log_params(args={})
 
     with logger.Sync():
-        logger.remove(".")
-        a = np.ones([1, 1, 100_000_000 // 4])
-        logger.print(f"the size of the tensor is {a.size}")
-        data = dict(key="ok", large=a)
-        logger.torch_save(data, f"save/data-{logger.now('%H.%M.%S')}.pkl")
+        import os
+        import torch
+        from pycurl import Curl
+        from tempfile import NamedTemporaryFile
+
+        logger.remove('upload/example.pt')
+
+        with NamedTemporaryFile(delete=True) as f:
+            torch.save(np.ones([10_000_000]), f)
+            # torch.save(np.ones([1000_000]), f)
+            logger.print(f.name)
+
+            c = Curl()
+            c.setopt(c.URL, logger.root_dir)
+            # proxy = os.environ.get('HTTP_PROXY')
+            # c.setopt(c.PROXY, proxy)
+            # logger.print('proxy:', proxy)
+            c.setopt(c.TIMEOUT, 100000)
+            c.setopt(c.HTTPPOST, [
+                ('file', (
+                    c.FORM_FILE, f.name,
+                    c.FORM_FILENAME, logger.prefix + '/upload/example.pt',
+                    c.FORM_CONTENTTYPE, 'plain/text',
+                )),
+            ])
+            c.perform()
+            c.close()
+
+        logger.print('done')
+
+
+        # logger.remove(".")
+        # a = np.ones([1, 1, 100_000_000 // 4])
+        # logger.print(f"the size of the tensor is {a.size}")
+        # data = dict(key="ok", large=a)
+        # logger.torch_save(data, f"save/data-{logger.now('%H.%M.%S')}.pkl")
     logger.print('done')
 
 

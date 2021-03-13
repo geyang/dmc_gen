@@ -1,7 +1,7 @@
 # DMControl Generalization Benchmark
 This code base is a fork-in-progress from [Hansen & Wang 2020](https://arxiv.org/abs/2011.13389)'s 
 
-The [./custom_vendor](./custom_vendor) folder contains the benchmark for generalization in continuous control from pixels based on [DMControl](https://github.com/deepmind/dm_control). Installation guide for these custom library could be found [there](./custom_vendor).
+The [./custom_vendor](./custom_vendor) folder contains the benchmark for generalization in continuous control from pixels based on [DMControl](https://github.com/deepmind/dm_control). Installation guide for these custom library could be found [there](./custom_vendor).
 
  
 
@@ -36,13 +36,22 @@ wget http://data.csail.mit.edu/places/places365/places365standard_easyformat.tar
 
 You should familiarize yourself with [their terms](http://places2.csail.mit.edu/download.html) before downloading. After downloading and extracting the data, add your dataset directory to the `data_dirs` list in `src/augmentations.py`.
 
+> if wget is being too slow, you can try too use `axel` which parallelizes the download.
+>
+> ```bash
+> sudo apt-get install axel
+> axel http://data.csail.mit.edu/places/places365/places365standard_easyformat.tar
+> ```
+>
+> If you do not have sudo rights, you can install axel from source (or use precompiled binary) [here](https://github.com/axel-download-accelerator/axel).
+
 The `video_easy` environment was proposed in [PAD](https://github.com/nicklashansen/policy-adaptation-during-deployment), and the `video_hard` environment uses a subset of the [RealEstate10K](https://google.github.io/realestate10k/) dataset for background rendering. All test environments (including video files) are included in this repository, namely in the `src/env/` directory.
 
 ```bash
 cd custom_vendor && make
 ```
 
-Remember to add `export DMCGEN_DATA=$($PWD)/custom_vendor/data` environment variable to point to the location of this folder.
+Remember to add `export DMCGEN_DATA=$($PWD)/custom_vendor/data` environment variable to point to the location of this folder.
 
 
 ## Training & Evaluation

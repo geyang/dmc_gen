@@ -6,7 +6,7 @@ if __name__ == '__main__':
     from dmc_gen.config import Args
     from dmc_gen_analysis import instr, RUN
 
-    RUN.overwrite = True
+    RUN.restart = True
     RUN.prefix = "{username}/{project}/{file_stem}/{job_name}"
     RUN.job_name = "{job_postfix}"
     ms = [
@@ -28,29 +28,29 @@ if __name__ == '__main__':
         with sweep.zip:
             Args.domain = ['walker', 'cartpole', 'ball_in_cup', 'finger']
             Args.task = ['walk', 'swingup', 'catch', 'spin']
-        Args.algo = ['curl', 'rad']
-        Args.seed = [100]
+        Args.algo = ['pad', 'soda', 'curl', 'rad']
+        Args.seed = [100, 300, 400]
 
-    for i, args in enumerate(sweep[:1]):
+    for i, args in enumerate(sweep):
         # jaynes.config("vision", launch=dict(ip=ms[i]))
         RUN.job_postfix = f"{Args.domain}-{Args.task}/{Args.algo}/{Args.seed}"
-        thunk = instr(train, args, _job_counter=False)
+        thunk = instr(train, args)
         logger.log_text("""
-                    keys:
-                    - Args.domain
-                    - Args.task
-                    - Args.algo
-                    - Args.seed
-                    charts:
-                    - yKey: "episode_reward/mean"
-                    xKey: step
-                    - yKey: "train/episode_reward/mean"
-                    xKey: step
-                    - type: video
-                    glob: videos/*_train.mp4
-                    - type: video
-                    glob: videos/*_test.mp4
-                    """, ".charts.yml", overwrite=True, dedent=True)
+                        keys:
+                        - Args.domain
+                        - Args.task
+                        - Args.algo
+                        - Args.seed
+                        charts:
+                        - yKey: "episode_reward/mean"
+                          xKey: step
+                        - yKey: "train/episode_reward/mean"
+                          xKey: step
+                        - type: video
+                          glob: videos/*_train.mp4
+                        - type: video
+                          glob: videos/*_test.mp4
+                        """, ".charts.yml", overwrite=True, dedent=True)
         jaynes.run(thunk)
 
     jaynes.listen()

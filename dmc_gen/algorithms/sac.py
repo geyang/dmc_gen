@@ -62,7 +62,7 @@ class SAC(nn.Module):
     #             "actor_optim critic_optim log_alpha_optim".split(' ')}
 
     def train(self, training=True):
-        self.training = training
+        self.is_training = training
         self.actor.train(training)
         self.critic.train(training)
 

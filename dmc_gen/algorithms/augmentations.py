@@ -6,6 +6,8 @@ import torchvision.datasets as datasets
 import torchvision.transforms as TF
 
 # Specify one or more data directories here
+from skimage.util import view_as_windows
+
 DATA_DIRS = '/your/data/path/here/',
 PLACES_LOADER = None
 PLACES_ITER = None

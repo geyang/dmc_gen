@@ -15,9 +15,20 @@ with open(pJoin(dirname(__file__), ".yours"), 'r') as stream:
 
 class RUN(ParamsProto):
     """The main point of this config object is to provide a way for config functions
-    to directly specify the job prefix."""
+    to directly specify the job prefix.
 
-    server = "http://54.71.92.65:9080"
+    :param job_prefix: prefix for this job
+    :param job_postfix: postfix for this job
+    :param job_counter:
+
+        example:
+            - job_counter == 0: sets counter to 0
+            - job_counter == None: does not use counter in logging prefix.
+            - job_counter = True: increment counter by "1" with each job.
+    """
+
+    # server = "http://54.71.92.65:8080"
+    server = "http://improbable005.csail.mit.edu:8080"
 
     username = rc.get('username', None)
     project = rc.get('project', None)
@@ -28,7 +39,7 @@ class RUN(ParamsProto):
     job_postfix = '{job_counter}'
     job_counter = Accumulant(None)
 
-    overwrite = False
+    restart = False
 
     readme = None
 
@@ -102,25 +113,12 @@ def config_charts(config_yaml, path=".charts.yml"):
     logger.log_text(dedent(config_yaml).lstrip(), path)
 
 
-def instr(fn, *ARGS,
-          _prefix=None,
-          _job_readme=None,
-          _run_readme=None,
-          __file=False, __silent=False, **KWARGS):
+def instr(fn, *ARGS, __file=False, __silent=False, **KWARGS):
     """
     thunk for configuring the logger. The reason why this is not a decorator is
 
     :param fn: function to be called
     :param *ARGS: position arguments for the call
-    :param _job_prefix: prefix for this job
-    :param _job_postfix: postfix for this job
-    :param _job_counter:
-
-        example:
-            - _job_counter == 0: sets counter to 0
-            - _job_counter == None: does not use counter in logging prefix.
-            - _job_counter = True: increment counter by "1" with each job.
-
     :param __file__: console mode, by-pass file related logging
     :param __silent: do not print
     :param **KWARGS: keyword arguments for the call
@@ -148,7 +146,7 @@ def instr(fn, *ARGS,
     # todo: we shouldn't need to log to the same directory, and the directory for the run shouldn't be fixed.
     logger.configure(root_dir=RUN.server, prefix=PREFIX, asynchronous=False,  # use sync logger
                      max_workers=4, register_experiment=False)
-    if RUN.overwrite:
+    if RUN.restart:
         with logger.Sync():
             logger.remove(".")
     logger.upload_file(caller_script)
@@ -210,7 +208,6 @@ def instr(fn, *ARGS,
             with logger.SyncContext():  # Make sure uploaded finished before termination.
                 logger.print(tb, color="red")
                 logger.log_text(tb, filename="traceback.err")
-                logger.print(f"{logger.hostname}: {os.environ.get('GPU_DEVICE_ORDINAL', 'N/A')}")
                 logger.log_params(run=dict(status="error", exitTime=logger.now()))
                 logger.flush()
             time.sleep(3)

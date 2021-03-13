@@ -20,7 +20,7 @@ def evaluate(env, agent, num_episodes, save_video=None):
         done = False
         episode_reward = 0
         while not done:
-            with utils.eval_mode(agent):
+            with utils.Eval(agent):
                 action = agent.select_action(obs)
             obs, reward, done, _ = env.step(action)
             if save_video:
@@ -70,27 +70,12 @@ def train(deps=None, **kwargs):
 
     # Prepare agent
     cropped_obs_shape = (3 * Args.frame_stack, 84, 84)
-    agent = make_agent(
-        obs_shape=cropped_obs_shape,
-        action_shape=env.action_space.shape,
-        args=Args
-    ).to(Args.device)
-
-    step = 0
-    with logger.Sync():
-        logger.print('remove the existing file')
-        logger.remove('models')
-        logger.print('logging the model')
-        logger.save_module(agent, f"models/{step:06d}.pkl")
-
-    logger.print('finished')
-    return
+    agent = make_agent(algo=Args.algo, obs_shape=cropped_obs_shape, act_shape=env.action_space.shape, args=Args).to(
+        Args.device)
 
     if Args.load_checkpoint:
         print('Loading from checkpoint:', Args.load_checkpoint)
         logger.load_module(agent, path="models/*.pkl", wd=Args.load_checkpoint, map_location=Args.device)
-        step = 10_000
-        logger.save_module(agent, f"models/{step:06d}.pkl")
 
     replay_buffer = utils.ReplayBuffer(
         obs_shape=env.observation_space.shape,
@@ -134,7 +119,7 @@ def train(deps=None, **kwargs):
         if step < Args.init_steps:
             action = env.action_space.sample()
         else:
-            with utils.eval_mode(agent):
+            with utils.Eval(agent):
                 action = agent.sample_action(obs)
 
         # Run training update

@@ -7,14 +7,14 @@ from dmc_gen.algorithms import augmentations
 from datetime import datetime
 
 
-class eval_mode(object):
+class Eval(object):
 	def __init__(self, *models):
 		self.models = models
 
 	def __enter__(self):
 		self.prev_states = []
 		for model in self.models:
-			self.prev_states.append(model.training)
+			self.prev_states.append(model.is_training)
 			model.train(False)
 
 	def __exit__(self, *args):

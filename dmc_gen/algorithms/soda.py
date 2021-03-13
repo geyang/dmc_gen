@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from dmc_gen.algorithms import modules as m
 from dmc_gen.algorithms.sac import SAC
 from dmc_gen.algorithms import augmentations
+from dmc_gen import utils
 
 
 class SODA(SAC):
@@ -68,16 +69,16 @@ class SODA(SAC):
             self.soda_tau
         )
 
-    def update(self, replay_buffer, L, step):
+    def update(self, replay_buffer, step):
         obs, action, reward, next_obs, not_done = replay_buffer.sample()
 
-        self.update_critic(obs, action, reward, next_obs, not_done, L, step)
+        self.update_critic(obs, action, reward, next_obs, not_done)
 
         if step % self.actor_update_freq == 0:
-            self.update_actor_and_alpha(obs, L, step)
+            self.update_actor_and_alpha(obs)
 
         if step % self.critic_target_update_freq == 0:
             self.soft_update_critic_target()
 
         if step % self.aux_update_freq == 0:
-            self.update_soda(replay_buffer, L, step)
+            self.update_soda(replay_buffer)
